@@ -82,15 +82,15 @@
         
         // Retry the request if appropriate
         if (retryNumber < [BNCPreferenceHelper getRetryCount] && isRetryableStatusCode) {
-            [NSThread sleepForTimeInterval:[BNCPreferenceHelper getRetryInterval]];
-            
-            if (log) {
-                [BNCPreferenceHelper log:FILE_NAME line:LINE_NUM message:@"Replaying request with tag %@", requestTag];
-            }
-            
-            // Create the next request
-            NSURLRequest *retryRequest = retryHandler(retryNumber);
-            [self genericHTTPRequest:retryRequest withTag:requestTag retryNumber:(retryNumber + 1) log:log callback:callback retryHandler:retryHandler];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)([BNCPreferenceHelper getRetryInterval] * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                if (log) {
+                    [BNCPreferenceHelper log:FILE_NAME line:LINE_NUM message:@"Replaying request with tag %@", requestTag];
+                }
+                
+                // Create the next request
+                NSURLRequest *retryRequest = retryHandler(retryNumber);
+                [self genericHTTPRequest:retryRequest withTag:requestTag retryNumber:(retryNumber + 1) log:log callback:callback retryHandler:retryHandler];
+            });
         }
         else if (callback) {
             // Wrap up bad statuses w/ specific error messages
